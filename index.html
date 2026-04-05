@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>建築法規查詢系統</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --ink-light: #555;
+    --ink-muted: #999;
+    --paper: #faf9f6;
+    --paper-warm: #f4f1eb;
+    --paper-deep: #ede9e0;
+    --accent: #8B6F47;
+    --accent-light: #C4A882;
+    --accent-bg: #f5efe6;
+    --border: rgba(0,0,0,0.1);
+    --border-strong: rgba(0,0,0,0.2);
+    --success: #3a7d44;
+    --success-bg: #edf5ef;
+    --warning: #a05c1a;
+    --warning-bg: #fdf0e3;
+    --danger: #b03030;
+    --danger-bg: #fdeaea;
+    --neutral: #666;
+    --neutral-bg: #f2f2f0;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+    --radius: 4px;
+    --radius-lg: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 14px;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+  /* ── Header ── */
+  header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 1.5rem 2rem;
+    display: flex;
+    align-items: baseline;
+    gap: 1.5rem;
+  }
+  header h1 {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+  header span {
+    font-size: 12px;
+    color: rgba(255,255,255,0.45);
+    letter-spacing: 0.08em;
+  }
+  /* ── Layout ── */
+  .main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+  @media (max-width: 640px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+  /* ── Section ── */
+  .section { margin-bottom: 2rem; }
+  .section-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--accent-light);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .section-label::before {
+    content: '';
+    display: inline-block;
+    width: 3px;
+    height: 12px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+  /* ── Card ── */
+  .card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    box-shadow: var(--shadow);
+  }
+  /* ── Form ── */
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 11px; font-weight: 500; color: var(--ink-light); letter-spacing: 0.04em; }
+  .field input, .field select, .field textarea {
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    padding: 8px 10px;
+    font-size: 13px;
+    font-family: 'Noto Sans TC', sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    width: 100%;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    outline: none;
+    border-color: var(--accent-light);
+    box-shadow: 0 0 0 3px rgba(139,111,71,0.1);
+  }
+  .field textarea { min-height: 90px; resize: vertical; line-height: 1.6; }
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 18px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+  .btn-primary {
+    background: var(--ink); color: var(--paper);
+    border-color: var(--ink);
+  }
+  .btn-primary:hover { background: #333; }
+  .btn-outline {
+    background: transparent; color: var(--ink);
+    border-color: var(--border-strong);
+  }
+  .btn-outline:hover { background: var(--paper-deep); }
+  .btn-accent {
+    background: var(--accent); color: white;
+    border-color: var(--accent);
+  }
+  .btn-accent:hover { background: #7a6040; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 1.25rem; }
+  /* ── Status Badges ── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px;
+    border-radius: 99px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.7; }
+  .badge-high { background: var(--danger-bg); color: var(--danger); }
+  .badge-mid  { background: var(--warning-bg); color: var(--warning); }
+  .badge-low  { background: var(--success-bg); color: var(--success); }
+  .badge-yes  { background: var(--danger-bg); color: var(--danger); }
+  .badge-no   { background: var(--success-bg); color: var(--success); }
+  .badge-unknown { background: var(--neutral-bg); color: var(--neutral); }
+  /* ── Result Cards ── */
+  .result-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 1rem; }
+  @media (max-width: 520px) { .result-grid { grid-template-columns: 1fr; } }
+  .result-card {
+    background: var(--paper-warm);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 0.9rem 1rem;
+  }
+  .result-card .rc-label { font-size: 11px; color: var(--ink-muted); margin-bottom: 6px; letter-spacing: 0.03em; }
+  /* ── Manual Table ── */
+  .manual-table { width: 100%; border-collapse: collapse; }
+  .manual-table tr { border-bottom: 1px solid var(--border); }
+  .manual-table tr:last-child { border-bottom: none; }
+  .manual-table td { padding: 9px 4px; vertical-align: middle; }
+  .manual-table td:first-child { font-size: 13px; color: var(--ink-light); width: 160px; }
+  .manual-table td input, .manual-table td select {
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    padding: 6px 8px;
+    font-size: 13px;
+    font-family: 'Noto Sans TC', sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    width: 100%;
+  }
+  .manual-table td input:focus, .manual-table td select:focus {
+    outline: none; border-color: var(--accent-light);
+    box-shadow: 0 0 0 2px rgba(139,111,71,0.1);
+  }
+  .ext-link {
+    display: inline-block;
+    font-size: 11px;
+    color: var(--accent);
+    border: 1px solid var(--accent-light);
+    padding: 3px 8px;
+    border-radius: var(--radius);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background 0.15s;
+  }
+  .ext-link:hover { background: var(--accent-bg); }
+  /* ── Loading ── */
+  .loading-bar {
+    display: none;
+    align-items: center; gap: 10px;
+    padding: 0.75rem 0;
+    font-size: 13px;
+    color: var(--ink-light);
+  }
+  .loading-bar.show { display: flex; }
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid var(--border-strong);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  /* ── Hidden ── */
+  .hidden { display: none !important; }
+  /* ── Report Preview ── */
+  #report-preview {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 2rem 2.5rem;
+    box-shadow: var(--shadow);
+    font-size: 13px;
+    line-height: 1.9;
+  }
+  #report-preview .rp-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 18px;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 0.25rem;
+    color: var(--ink);
+  }
+  #report-preview .rp-subtitle {
+    font-size: 12px;
+    color: var(--ink-muted);
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+  #report-preview .rp-divider {
+    border: none;
+    border-top: 1px solid var(--border-strong);
+    margin: 1.2rem 0;
+  }
+  #report-preview .rp-section-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.6rem;
+    margin-top: 1rem;
+  }
+  #report-preview .rp-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    border-bottom: 1px dotted rgba(0,0,0,0.07);
+  }
+  #report-preview .rp-row:last-child { border-bottom: none; }
+  #report-preview .rp-key { color: var(--ink-light); }
+  #report-preview .rp-val { font-weight: 500; color: var(--ink); text-align: right; }
+  #report-preview .rp-note {
+    background: var(--paper-warm);
+    border-left: 3px solid var(--accent-light);
+    padding: 0.75rem 1rem;
+    font-size: 12px;
+    color: var(--ink-light);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    margin-top: 1rem;
+    white-space: pre-wrap;
+  }
+  #report-preview .rp-disclaimer {
+    font-size: 11px;
+    color: var(--ink-muted);
+    text-align: center;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+  /* ── Coord hint ── */
+  .coord-hint {
+    font-size: 12px;
+    color: var(--ink-muted);
+    margin-top: 8px;
+  }
+  /* ── Error msg ── */
+  .error-msg {
+    font-size: 12px;
+    color: var(--danger);
+    margin-top: 8px;
+    display: none;
+  }
+  /* ── Print ── */
+  @media print {
+    header, .section:not(#section-report), .btn-row { display: none !important; }
+    body { background: white; }
+    #report-preview { box-shadow: none; border: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>建築法規查詢系統</h1>
+  <span>ARCHITECTURE REGULATION QUERY</span>
+</header>
+
+<div class="main">
+
+  <!-- ① 地號輸入 -->
+  <div class="section" id="section-input">
+    <div class="section-label">地號查詢</div>
+    <div class="card">
+      <div class="grid-3" style="margin-bottom:1rem;">
+        <div class="field">
+          <label>縣市</label>
+          <select id="city">
+            <option>臺北市</option><option>新北市</option><option>桃園市</option>
+            <option>臺中市</option><option>臺南市</option><option>高雄市</option>
+            <option>基隆市</option><option>新竹市</option><option>新竹縣</option>
+            <option>苗栗縣</option><option>彰化縣</option><option>南投縣</option>
+            <option>雲林縣</option><option>嘉義市</option><option>嘉義縣</option>
+            <option>屏東縣</option><option>宜蘭縣</option><option>花蓮縣</option>
+            <option>臺東縣</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>地段名稱</label>
+          <input type="text" id="segment" placeholder="例：大安段一小段" />
+        </div>
+        <div class="field">
+          <label>地號</label>
+          <input type="text" id="landno" placeholder="例：141-1" />
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="queryLand()">查詢地籍座標</button>
+        <div class="loading-bar" id="loading">
+          <div class="spinner"></div>
+          <span>查詢地籍資料中，請稍候…</span>
+        </div>
+      </div>
+      <div class="coord-hint" id="coord-hint"></div>
+      <div class="error-msg" id="error-msg"></div>
+    </div>
+  </div>
+
+  <!-- ② 自動查詢結果 -->
+  <div class="section hidden" id="section-auto">
+    <div class="section-label">環境敏感地區（自動查詢）</div>
+    <div class="result-grid">
+      <div class="result-card">
+        <div class="rc-label">土壤液化潛勢</div>
+        <span id="liq-badge" class="badge badge-unknown">查詢中…</span>
+      </div>
+      <div class="result-card">
+        <div class="rc-label">山坡地範圍</div>
+        <span id="slope-badge" class="badge badge-unknown">請手動確認</span>
+        <div style="margin-top:6px;">
+          <a class="ext-link" href="https://dmgis.fa.gov.tw/dmgis/" target="_blank">農水署查詢 ↗</a>
+        </div>
+      </div>
+      <div class="result-card">
+        <div class="rc-label">活動斷層</div>
+        <span id="fault-badge" class="badge badge-unknown">請手動確認</span>
+        <div style="margin-top:6px;">
+          <a class="ext-link" href="https://fault.moeacgs.gov.tw/" target="_blank">地質調查所 ↗</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 手動填入 -->
+  <div class="section hidden" id="section-manual">
+    <div class="section-label">都市計畫資料（手動填入）</div>
+    <div class="card">
+      <table class="manual-table">
+        <tr>
+          <td>使用分區</td>
+          <td><input type="text" id="m-zone" placeholder="例：第三種住宅區" /></td>
+          <td style="width:110px; padding-left:8px;">
+            <a class="ext-link" href="https://luz.tcd.gov.tw/WEB/" target="_blank">全國查詢 ↗</a>
+          </td>
+        </tr>
+        <tr>
+          <td>建蔽率</td>
+          <td><input type="text" id="m-bc" placeholder="例：45%" /></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>容積率</td>
+          <td><input type="text" id="m-far" placeholder="例：225%" /></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>開挖率</td>
+          <td><input type="text" id="m-exca" placeholder="例：60%（地下室最大開挖面積比）" /></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>需要都市設計審議？</td>
+          <td>
+            <select id="m-urban">
+              <option value="">── 選擇 ──</option>
+              <option value="是">是，需辦理都審</option>
+              <option value="否">否，免都審</option>
+              <option value="需確認">需向主管機關確認</option>
+            </select>
+          </td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>山坡地（手動確認）</td>
+          <td>
+            <select id="m-slope">
+              <option value="">── 選擇 ──</option>
+              <option value="是">是，位於山坡地範圍</option>
+              <option value="否">否，非山坡地</option>
+            </select>
+          </td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>活動斷層（手動確認）</td>
+          <td>
+            <select id="m-fault">
+              <option value="">── 選擇 ──</option>
+              <option value="是，位於斷層影響範圍內">是，位於斷層影響範圍內</option>
+              <option value="否，不在斷層影響範圍">否，不在斷層影響範圍</option>
+              <option value="需進一步調查">需進一步調查</option>
+            </select>
+          </td>
+          <td></td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="section-label" style="margin-top:1.5rem;">需檢討法規 ／ 特殊注意事項</div>
+    <div class="card">
+      <div class="field">
+        <label>備註（可填入需特別檢討的法規、退縮、高度限制、特殊規定等）</label>
+        <textarea id="m-notes" placeholder="例：&#10;- 需檢討建築技術規則第13章山坡地建築&#10;- 臨路退縮 4m&#10;- 高度限制 18m&#10;- 位於文化景觀保護區，需文化局審查"></textarea>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-accent" onclick="buildReport()">產生報表</button>
+      <button class="btn btn-outline" onclick="resetAll()">重新查詢</button>
+    </div>
+  </div>
+
+  <!-- ④ 報表預覽 -->
+  <div class="section hidden" id="section-report">
+    <div class="section-label">建築法規查詢報告</div>
+    <div id="report-preview"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="exportPDF()">匯出 PDF</button>
+      <button class="btn btn-outline" onclick="window.print()">列印</button>
+      <button class="btn btn-outline" onclick="resetAll()">重新查詢</button>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+let landCoords = null;
+const show = id => document.getElementById(id).classList.remove('hidden');
+const hide = id => document.getElementById(id).classList.add('hidden');
+const setHTML = (id, html) => document.getElementById(id).innerHTML = html;
+const val = id => document.getElementById(id).value.trim();
+
+// ── CORS Proxy 多重備援 ───────────────────────────────────
+const PROXIES = [
+  u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+  u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+];
+
+async function fetchProxy(url) {
+  try {
+    const r = await fetch(url, {signal: AbortSignal.timeout(4000)});
+    if (r.ok) return r;
+  } catch(e) {}
+  for (const mk of PROXIES) {
+    try {
+      const r = await fetch(mk(url), {signal: AbortSignal.timeout(8000)});
+      if (r.ok) return r;
+    } catch(e) {}
+  }
+  throw new Error('所有查詢管道均失敗，請稍後再試');
+}
+
+// ── 查詢地籍 ──────────────────────────────────────────────
+async function queryLand() {
+  const city = val('city');
+  const seg  = val('segment');
+  const no   = val('landno');
+  const hint = document.getElementById('coord-hint');
+  const err  = document.getElementById('error-msg');
+
+  if (!seg || !no) {
+    err.textContent = '請填入地段名稱和地號。';
+    err.style.display = 'block'; return;
+  }
+  err.style.display = 'none';
+  hint.textContent = '';
+  document.getElementById('loading').classList.add('show');
+  hide('section-auto'); hide('section-manual'); hide('section-report');
+
+  try {
+    const query = encodeURIComponent(`${city},${seg},${no}`);
+    const targetUrl = `https://twland.ronny.tw/index/search?lands[]=${query}`;
+    const res = await fetchProxy(targetUrl);
+    const data = await res.json();
+
+    if (data.features && data.features.length > 0) {
+      const feat = data.features[0];
+      const g = feat.geometry;
+      let lon, lat;
+      if (g.type === 'Polygon') {
+        const ring = g.coordinates[0];
+        lon = ring.reduce((s,c)=>s+c[0],0)/ring.length;
+        lat = ring.reduce((s,c)=>s+c[1],0)/ring.length;
+      } else { lon = g.coordinates[0]; lat = g.coordinates[1]; }
+      landCoords = {lon, lat};
+      hint.textContent = `✓ 地籍座標取得：${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+      await checkLiquefaction(lon, lat);
+      show('section-auto'); show('section-manual');
+    } else {
+      err.textContent = '找不到此地號，請確認：縣市是否正確、地段名稱是否含小段（如「一小段」）、地號格式（大號-小號，如 141-1）。';
+      err.style.display = 'block';
+    }
+  } catch(e) {
+    err.textContent = `查詢失敗（${e.message}）。請確認網路連線，或嘗試用 VS Code Live Server 開啟此檔案。`;
+    err.style.display = 'block';
+  }
+  document.getElementById('loading').classList.remove('show');
+}
+
+// ── 土壤液化查詢 ──────────────────────────────────────────
+async function checkLiquefaction(lon, lat) {
+  const badge = document.getElementById('liq-badge');
+  badge.textContent = '查詢中…';
+  badge.className = 'badge badge-unknown';
+  try {
+    const targetUrl = `https://www.liquid.net.tw/cgs/Api/Query?x=${lon}&y=${lat}`;
+    const res = await fetchProxy(targetUrl);
+    const data = await res.json();
+    const lvl = data?.level || data?.Level || data?.data?.level || data?.Result?.level;
+    if (lvl === '高' || lvl === 'H' || lvl === '3') { badge.textContent = '高潛勢區'; badge.className = 'badge badge-high'; }
+    else if (lvl === '中' || lvl === 'M' || lvl === '2') { badge.textContent = '中潛勢區'; badge.className = 'badge badge-mid'; }
+    else if (lvl === '低' || lvl === 'L' || lvl === '1') { badge.textContent = '低潛勢區'; badge.className = 'badge badge-low'; }
+    else { badge.textContent = '請手動確認'; badge.className = 'badge badge-unknown'; }
+  } catch {
+    badge.textContent = '請手動確認';
+    badge.className = 'badge badge-unknown';
+  }
+}
+
+// ── 產生報表 ──────────────────────────────────────────────
+function buildReport() {
+  const city   = val('city');
+  const seg    = val('segment');
+  const no     = val('landno');
+  const zone   = val('m-zone')   || '─';
+  const bc     = val('m-bc')     || '─';
+  const far    = val('m-far')    || '─';
+  const exca   = val('m-exca')   || '─';
+  const urban  = val('m-urban')  || '未確認';
+  const slope  = val('m-slope')  || document.getElementById('slope-badge').textContent;
+  const fault  = val('m-fault')  || '未確認';
+  const notes  = val('m-notes')  || '（無）';
+  const liq    = document.getElementById('liq-badge').textContent;
+  const date   = new Date().toLocaleDateString('zh-TW', {year:'numeric',month:'2-digit',day:'2-digit'});
+  const coords = landCoords ? `${landCoords.lat.toFixed(5)}, ${landCoords.lon.toFixed(5)}` : '─';
+
+  // 自動法規提示
+  const tips = [];
+  if (liq.includes('高')) tips.push('‣ 土壤液化高潛勢：需依建築技術規則第64條辦理地盤改良或特殊基礎設計，建議委託大地技師進行地質調查');
+  if (liq.includes('中')) tips.push('‣ 土壤液化中潛勢：建議進行地盤調查，視鑽探結果決定是否需地盤改良');
+  if (slope.includes('是') || slope.includes('山坡')) tips.push('‣ 山坡地建築：需依建築技術規則第13章（第260-268條）辦理，應檢討基地開發許可');
+  if (fault.includes('是')) tips.push('‣ 位於活動斷層影響範圍：依地質法第8條，地質敏感區內建築應進行基地地質調查及安全評估');
+  if (urban.includes('是')) tips.push('‣ 需辦理都市設計審議：申請建照前須取得都審核准，建議提前與建管機關確認審查重點');
+  if (exca !== '─') tips.push('‣ 開挖率：地下室開挖面積不得超過建築基地面積之 ' + exca + '，需確認符合各縣市規定');
+  const tipsText = tips.length > 0 ? tips.join('\n') : '（依填入資料無自動提示，請參閱相關法規）';
+
+  const html = `
+    <div class="rp-title">建築法規查詢報告</div>
+    <div class="rp-subtitle">ARCHITECTURE REGULATION REPORT &nbsp;·&nbsp; 查詢日期：${date}</div>
+    <hr class="rp-divider">
+
+    <div class="rp-section-title">基地資訊</div>
+    <div class="rp-row"><span class="rp-key">縣市</span><span class="rp-val">${city}</span></div>
+    <div class="rp-row"><span class="rp-key">地段</span><span class="rp-val">${seg}</span></div>
+    <div class="rp-row"><span class="rp-key">地號</span><span class="rp-val">${no}</span></div>
+    <div class="rp-row"><span class="rp-key">座標（WGS84）</span><span class="rp-val">${coords}</span></div>
+
+    <hr class="rp-divider">
+    <div class="rp-section-title">都市計畫</div>
+    <div class="rp-row"><span class="rp-key">使用分區</span><span class="rp-val">${zone}</span></div>
+    <div class="rp-row"><span class="rp-key">建蔽率</span><span class="rp-val">${bc}</span></div>
+    <div class="rp-row"><span class="rp-key">容積率</span><span class="rp-val">${far}</span></div>
+    <div class="rp-row"><span class="rp-key">開挖率</span><span class="rp-val">${exca}</span></div>
+    <div class="rp-row"><span class="rp-key">都市設計審議（都審）</span><span class="rp-val">${urban}</span></div>
+
+    <hr class="rp-divider">
+    <div class="rp-section-title">環境敏感地區</div>
+    <div class="rp-row"><span class="rp-key">土壤液化潛勢</span><span class="rp-val">${liq}</span></div>
+    <div class="rp-row"><span class="rp-key">山坡地範圍</span><span class="rp-val">${slope || '─'}</span></div>
+    <div class="rp-row"><span class="rp-key">活動斷層</span><span class="rp-val">${fault}</span></div>
+
+    <hr class="rp-divider">
+    <div class="rp-section-title">需檢討法規 ／ 注意事項（自動提示）</div>
+    <div class="rp-note">${tipsText}</div>
+
+    <hr class="rp-divider">
+    <div class="rp-section-title">備註（手動填入）</div>
+    <div class="rp-note">${notes}</div>
+
+    <div class="rp-disclaimer">
+      本報告資料僅供初步規劃參考，不具法律效力。<br>
+      實際設計應依各主管機關公告之都市計畫書圖、建築法規及相關法令為準。<br>
+      土壤液化資料來源：經濟部地質調查及礦業管理中心（${date}查詢）
+    </div>
+  `;
+
+  document.getElementById('report-preview').innerHTML = html;
+  show('section-report');
+  document.getElementById('section-report').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// ── PDF 匯出 ──────────────────────────────────────────────
+function exportPDF() {
+  const {jsPDF} = window.jspdf;
+  const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+
+  const city   = val('city');
+  const seg    = val('segment');
+  const no     = val('landno');
+  const zone   = val('m-zone')   || '─';
+  const bc     = val('m-bc')     || '─';
+  const far    = val('m-far')    || '─';
+  const exca   = val('m-exca')   || '─';
+  const urban  = val('m-urban')  || '未確認';
+  const slope  = val('m-slope')  || document.getElementById('slope-badge').textContent;
+  const fault  = val('m-fault')  || '未確認';
+  const notes  = val('m-notes')  || '（無）';
+  const liq    = document.getElementById('liq-badge').textContent;
+  const date   = new Date().toLocaleDateString('zh-TW');
+  const coords = landCoords ? `${landCoords.lat.toFixed(5)}, ${landCoords.lon.toFixed(5)}` : '─';
+
+  const pageW = doc.internal.pageSize.getWidth();
+  const margin = 18;
+  const contentW = pageW - margin * 2;
+  let y = margin;
+
+  const addLine = (label, value, yPos) => {
+    doc.setFontSize(9);
+    doc.setTextColor(120,100,80);
+    doc.text(label, margin, yPos);
+    doc.setTextColor(30,30,30);
+    doc.text(value, margin + 55, yPos);
+    return yPos + 6;
+  };
+
+  const sectionTitle = (title, yPos) => {
+    doc.setFillColor(244,241,235);
+    doc.rect(margin, yPos - 3.5, contentW, 7, 'F');
+    doc.setFontSize(8);
+    doc.setTextColor(139,111,71);
+    doc.text(title, margin + 2, yPos + 1.5);
+    return yPos + 9;
+  };
+
+  // Title
+  doc.setFontSize(16);
+  doc.setTextColor(26,26,26);
+  doc.text('建築法規查詢報告', pageW/2, y, {align:'center'});
+  y += 7;
+  doc.setFontSize(8);
+  doc.setTextColor(150,150,150);
+  doc.text(`ARCHITECTURE REGULATION REPORT  ·  ${date}`, pageW/2, y, {align:'center'});
+  y += 4;
+  doc.setDrawColor(200,185,165);
+  doc.line(margin, y, pageW-margin, y);
+  y += 8;
+
+  y = sectionTitle('基地資訊', y);
+  y = addLine('縣市', city, y);
+  y = addLine('地段', seg, y);
+  y = addLine('地號', no, y);
+  y = addLine('座標 (WGS84)', coords, y);
+  y += 4;
+
+  doc.setDrawColor(230,220,205); doc.line(margin, y, pageW-margin, y); y += 6;
+  y = sectionTitle('都市計畫', y);
+  y = addLine('使用分區', zone, y);
+  y = addLine('建蔽率', bc, y);
+  y = addLine('容積率', far, y);
+  y = addLine('開挖率', exca, y);
+  y = addLine('都市設計審議（都審）', urban, y);
+  y += 4;
+
+  doc.setDrawColor(230,220,205); doc.line(margin, y, pageW-margin, y); y += 6;
+  y = sectionTitle('環境敏感地區', y);
+  y = addLine('土壤液化潛勢', liq, y);
+  y = addLine('山坡地範圍', slope || '─', y);
+  y = addLine('活動斷層', fault, y);
+  y += 4;
+
+  doc.setDrawColor(230,220,205); doc.line(margin, y, pageW-margin, y); y += 6;
+  y = sectionTitle('備註 ／ 需檢討法規', y);
+  doc.setFontSize(9);
+  doc.setTextColor(80,70,60);
+  const noteLines = doc.splitTextToSize(notes, contentW - 4);
+  noteLines.forEach(line => {
+    if (y > 270) { doc.addPage(); y = margin; }
+    doc.text(line, margin + 2, y);
+    y += 5.5;
+  });
+  y += 4;
+
+  doc.setDrawColor(200,185,165); doc.line(margin, y, pageW-margin, y); y += 6;
+  doc.setFontSize(7.5);
+  doc.setTextColor(160,150,140);
+  const disc = '本報告資料僅供初步規劃參考，不具法律效力。實際設計應依各主管機關公告之都市計畫書圖及相關法規為準。';
+  const discLines = doc.splitTextToSize(disc, contentW);
+  discLines.forEach(line => { doc.text(line, pageW/2, y, {align:'center'}); y += 5; });
+
+  const filename = `建築法規查詢_${city}${seg}${no}_${date.replace(/\//g,'-')}.pdf`;
+  doc.save(filename);
+}
+
+// ── 重置 ──────────────────────────────────────────────────
+function resetAll() {
+  landCoords = null;
+  ['segment','landno','m-zone','m-bc','m-far','m-exca','m-notes'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  ['m-urban','m-slope','m-fault'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('coord-hint').textContent = '';
+  document.getElementById('error-msg').style.display = 'none';
+  document.getElementById('liq-badge').textContent = '查詢中…';
+  document.getElementById('liq-badge').className = 'badge badge-unknown';
+  document.getElementById('slope-badge').textContent = '請手動確認';
+  document.getElementById('fault-badge').textContent = '請手動確認';
+  hide('section-auto'); hide('section-manual'); hide('section-report');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+// Enter key
+['segment','landno'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') queryLand();
+  });
+});
+</script>
+</body>
+</html>
